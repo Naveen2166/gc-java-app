@@ -1,0 +1,45 @@
+pipeline {
+    agent any
+    tools {
+        maven 'maven-3.9.6'
+    }
+    options {
+  timestamps()
+  buildDiscarder logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '3', numToKeepStr: '3')
+}
+
+
+    
+
+    stages {
+        stage('Hello') {
+            steps {
+                echo 'Hello World'
+            }
+        }
+        
+        stage('clone the repo') {
+            steps {
+               git branch: 'main', credentialsId: 'github_credential', poll: false, url: 'https://github.com/Naveen2166/gc-java-app.git' 
+            }
+        }
+      stage('build the code') {
+            steps {
+                sh 'mvn clean install'
+               
+            }
+        } 
+        
+        stage('push to artifacatory') {
+            steps {
+            nexusArtifactUploader artifacts: [[artifactId: 'Spring3HibernateApp', classifier: '', file: '/var/lib/jenkins/workspace/jenkins_deploy/target/Spring3HibernateApp.war', type: 'war']], credentialsId: 'nexus_credential', groupId: 'Spring3HibernateApp', nexusUrl: '54.226.56.92:8081', nexusVersion: 'nexus3', protocol: 'http', repository: 'maven-snapshots', version: '1.2-SNAPSHOT'    
+            }
+        }
+        
+        stage('deploy the application in tomcat') {
+            steps {
+              deploy adapters: [tomcat9(credentialsId: 'tomcat', path: '', url: 'http://18.209.110.214:8080')], contextPath: null, war: '**/*.war'            
+            }
+        }
+    }
+}
